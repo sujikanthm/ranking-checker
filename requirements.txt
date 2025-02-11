@@ -1,4 +1,4 @@
-Flask
-flask-socketio
+streamlit
 requests
 python-dotenv
+pandas
