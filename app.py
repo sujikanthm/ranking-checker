@@ -3,12 +3,9 @@ import requests
 import pandas as pd
 import csv
 import io
-from dotenv import load_dotenv
-import os
 
-# Load environment variables
-load_dotenv()
-API_KEY = os.getenv("SERPER_API_KEY")
+# Retrieve API key from Streamlit Secrets
+API_KEY = st.secrets["settings"]["SERPER_API_KEY"]
 
 # Function to Check Rankings
 def check_ranking(keyword, target_urls):
