@@ -36,7 +36,10 @@ def check_ranking(keyword, target_urls):
                 None
             )
             if position:
-                results[target_url] = f"Page {((position - 1) // 10) + 1} Rank {position}"
+                # Calculate page number and position within page
+                page_number = ((position - 1) // 10) + 1
+                position_in_page = ((position - 1) % 10) + 1
+                results[target_url] = f"Page {page_number} Rank {position_in_page}"
             else:
                 results[target_url] = "Not Ranked"
         
@@ -91,4 +94,3 @@ if st.button("Start Ranking Check"):
         )
     else:
         st.warning("🚨 Please enter both keywords and URLs.")
-        
