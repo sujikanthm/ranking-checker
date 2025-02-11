@@ -1,10 +1,10 @@
 import streamlit as st
 import requests
-import csv
-import datetime
-import os
 import pandas as pd
+import csv
+import io
 from dotenv import load_dotenv
+import os
 
 # Load environment variables
 load_dotenv()
@@ -48,18 +48,15 @@ def check_ranking(keyword, target_urls):
         st.error(f"❌ Error for '{keyword}': {response.status_code} - {response.text}")
         return {url: "Error" for url in target_urls}
 
-# Save CSV File
-def save_csv(data, target_urls):
-    now = datetime.datetime.now()
-    filename = f"rankings_matrix_{now.strftime('%Y-%m-%d_%H-%M')}.csv"
-    filepath = os.path.join(os.getcwd(), filename)
+# Function to Generate CSV as a Downloadable File
+def generate_csv(data, target_urls):
+    output = io.StringIO()
+    writer = csv.writer(output)
     
-    with open(filepath, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Keyword"] + target_urls)
-        writer.writerows(data)
+    writer.writerow(["Keyword"] + target_urls)  # Write Header
+    writer.writerows(data)  # Write Data
     
-    return filepath
+    return output.getvalue()
 
 # Streamlit UI
 st.title("🔍 Keyword Ranking Checker")
@@ -87,14 +84,13 @@ if st.button("Start Ranking Check"):
         st.write("### Ranking Results")
         st.dataframe(df)
 
-        # Save and Provide Download Option
-        csv_file = save_csv(ranking_data, urls_list)
-        with open(csv_file, "rb") as file:
-            st.download_button(
-                label="📥 Download CSV",
-                data=file,
-                file_name=os.path.basename(csv_file),
-                mime="text/csv"
-            )
+        # Generate CSV for Download (Only in Memory, Not Saved)
+        csv_data = generate_csv(ranking_data, urls_list)
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name="rankings.csv",
+            mime="text/csv"
+        )
     else:
         st.warning("⚠️ Please enter both keywords and URLs.")
