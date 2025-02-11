@@ -90,4 +90,4 @@ if st.button("Start Ranking Check"):
             mime="text/csv"
         )
     else:
-        st.warning("⚠️ Please enter both keywords and URLs.")
+        st.warning("🚨 Please enter both keywords and URLs.")
