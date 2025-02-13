@@ -171,14 +171,24 @@ class RankTracker:
                 
                 rankings = check_ranking(self.api_key, keyword, domains)
                 row_data = [keyword]
-                ref_position, ref_rank_text = rankings.get(REFERENCE_DOMAIN, (None, "Not Ranked"))
-                ref_position = ref_position or float('inf')
-                old_ref_rank_text = previous_data.get(keyword, [])[reference_domain_index] if keyword in previous_data else ""
                 
+                # Find the best ranking position
+                best_position = float('inf')
+                best_domain_index = None
+                
+                for j, domain in enumerate(domains):
+                    position, _ = rankings.get(domain, (None, "Not Ranked"))
+                    if position and position < best_position:
+                        best_position = position
+                        best_domain_index = j
+                
+                # Process each domain
                 for j, domain in enumerate(domains):
                     new_position, new_rank_text = rankings.get(domain, (None, "Not Ranked"))
                     
                     if domain == REFERENCE_DOMAIN:
+                        # Get old reference rank for comparison
+                        old_ref_rank_text = previous_data.get(keyword, [])[reference_domain_index] if keyword in previous_data else ""
                         if old_ref_rank_text and "Rank" in old_ref_rank_text:
                             old_rank_match = re.search(r'Rank (\d+)', old_ref_rank_text)
                             if old_rank_match and new_position:
@@ -186,11 +196,15 @@ class RankTracker:
                                 if new_position < old_rank:
                                     new_rank_text = f"{new_rank_text} ↑"
                         
-                        if all(new_position <= (rankings[d][0] or float('inf')) for d in domains if d != REFERENCE_DOMAIN):
-                            cells_to_format.append({"row": i + 1, "col": j + 1, "color": GREEN_COLOR})
-                        else:
-                            cells_to_format.append({"row": i + 1, "col": j + 1, "color": YELLOW_COLOR})
-                    elif new_position and new_position < ref_position:
+                        # Color reference domain yellow by default
+                        cells_to_format.append({"row": i + 1, "col": j + 1, "color": YELLOW_COLOR})
+                        
+                        # If reference domain is the best, change to green
+                        if j == best_domain_index:
+                            cells_to_format[-1]["color"] = GREEN_COLOR
+                    
+                    # Color the best ranking domain in green (if it's not the reference domain)
+                    elif j == best_domain_index:
                         cells_to_format.append({"row": i + 1, "col": j + 1, "color": GREEN_COLOR})
                     
                     row_data.append(new_rank_text)
