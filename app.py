@@ -7,6 +7,14 @@ import io
 # Retrieve API key from Streamlit Secrets
 API_KEY = st.secrets["settings"]["SERPER_API_KEY"]
 
+st.set_page_config(page_title="Keyword Ranking Checker")
+
+st.title("🔍 Keyword Ranking Checker")
+
+st.markdown("### Navigate to Other Sections:")
+st.page_link("pages/lolc_rank_tracker.py", label="📊 LOLC Rank Tracker")
+
+
 # Function to Check Rankings
 def check_ranking(keyword, target_urls):
     url = "https://google.serper.dev/search"
