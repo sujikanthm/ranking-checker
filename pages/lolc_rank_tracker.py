@@ -1,12 +1,14 @@
 import streamlit as st
 import pandas as pd
 import gspread
-from google.oauth2.service_account import Credentials
+from oauth2client.service_account import ServiceAccountCredentials
 import requests
 import re
 import time
 import logging
 from typing import Dict, List, Tuple, Optional
+from pathlib import Path
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -68,9 +70,24 @@ class RankTracker:
             self.error_message = str(e)
 
     def setup_credentials(self):
-        """Set up Google Sheets credentials with error checking."""
+        """Set up Google Sheets credentials using secrets.toml configuration."""
         try:
-            self.creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPE)
+            # Get service account info from secrets
+            service_account_info = {
+                "type": st.secrets["gcp_service_account"]["type"],
+                "project_id": st.secrets["gcp_service_account"]["project_id"],
+                "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
+                "private_key": st.secrets["gcp_service_account"]["private_key"],
+                "client_email": st.secrets["gcp_service_account"]["client_email"],
+                "client_id": st.secrets["gcp_service_account"]["client_id"],
+                "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
+                "token_uri": st.secrets["gcp_service_account"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"],
+                "universe_domain": st.secrets["gcp_service_account"]["universe_domain"]
+            }
+            
+            self.creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, SCOPE)
             self.client = gspread.authorize(self.creds)
         except Exception as e:
             raise Exception(f"Failed to set up Google credentials: {str(e)}")
@@ -78,14 +95,18 @@ class RankTracker:
     def setup_google_sheets(self):
         """Set up Google Sheets connection with proper error handling."""
         try:
-            sheet_id = st.secrets["settings"]["SHEET_ID"]
-            self.sheet = self.client.open_by_key(sheet_id).sheet1
+            sheet_id = st.secrets.get("settings", {}).get("SHEET_ID")
+            if not sheet_id:
+                raise ValueError("SHEET_ID not found in Streamlit secrets")
+            
+            sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit?gid=0"
+            self.sheet = self.client.open_by_url(sheet_url).sheet1
         except Exception as e:
             raise Exception(f"Failed to connect to Google Sheet: {str(e)}")
 
     def setup_serper_api(self):
         """Set up Serper API with validation."""
-        self.api_key = st.secrets["settings"]["SERPER_API_KEY"]
+        self.api_key = st.secrets.get("settings", {}).get("SERPER_API_KEY")
         if not self.api_key:
             raise ValueError("SERPER_API_KEY not found in Streamlit secrets")
 
@@ -143,8 +164,15 @@ class RankTracker:
             keywords = [row[0] for row in data[1:]]
             domains = headers[1:]
             
-            self.clear_cell_formatting()
+            if REFERENCE_DOMAIN not in domains:
+                st.error(f"Reference domain '{REFERENCE_DOMAIN}' not found in sheet headers")
+                return
+                
+            reference_domain_index = domains.index(REFERENCE_DOMAIN)
+            previous_data = {row[0]: row[1:] for row in data[1:]}
             new_data, cells_to_format = [], []
+            
+            self.clear_cell_formatting()
 
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -155,16 +183,44 @@ class RankTracker:
                 
                 rankings = check_ranking(self.api_key, keyword, domains)
                 row_data = [keyword]
-
+                
+                # Find the best ranking position
+                best_position = float('inf')
+                best_domain_index = None
+                
                 for j, domain in enumerate(domains):
-                    position, new_rank_text = rankings.get(domain, (None, "Not Ranked"))
-                    row_data.append(new_rank_text)
-
+                    position, _ = rankings.get(domain, (None, "Not Ranked"))
+                    if position and position < best_position:
+                        best_position = position
+                        best_domain_index = j
+                
+                # Process each domain
+                for j, domain in enumerate(domains):
+                    new_position, new_rank_text = rankings.get(domain, (None, "Not Ranked"))
+                    
                     if domain == REFERENCE_DOMAIN:
+                        # Get old reference rank for comparison
+                        old_ref_rank_text = previous_data.get(keyword, [])[reference_domain_index] if keyword in previous_data else ""
+                        if old_ref_rank_text and "Rank" in old_ref_rank_text:
+                            old_rank_match = re.search(r'Rank (\d+)', old_ref_rank_text)
+                            if old_rank_match and new_position:
+                                old_rank = int(old_rank_match.group(1))
+                                if new_position < old_rank:
+                                    new_rank_text = f"{new_rank_text} ↑"
+                        
+                        # Color reference domain yellow by default
                         cells_to_format.append({"row": i + 1, "col": j + 1, "color": YELLOW_COLOR})
-                    elif position and position == min(filter(None, [r[0] for r in rankings.values()])):
+                        
+                        # If reference domain is the best, change to green
+                        if j == best_domain_index:
+                            cells_to_format[-1]["color"] = GREEN_COLOR
+                    
+                    # Color the best ranking domain in green (if it's not the reference domain)
+                    elif j == best_domain_index:
                         cells_to_format.append({"row": i + 1, "col": j + 1, "color": GREEN_COLOR})
-
+                    
+                    row_data.append(new_rank_text)
+                
                 new_data.append(row_data)
             
             self.sheet.update(values=new_data, range_name="A2")
@@ -181,19 +237,26 @@ class RankTracker:
 
 def main():
     st.title("📊 LOLC Rank Tracker")
-
-    if not st.secrets.get("settings"):
-        st.error("Missing 'settings' in Streamlit secrets")
+    
+    # Check for required secrets
+    if not st.secrets.get("settings") or not st.secrets.get("gcp_service_account"):
+        st.error("Missing required configurations in Streamlit secrets")
+        st.info("Please ensure both 'settings' and 'gcp_service_account' sections are configured in your .streamlit/secrets.toml file")
         return
 
-    tracker = RankTracker()
-    if not tracker.initialization_successful:
-        st.error(f"Initialization failed: {tracker.error_message}")
-        return
-
-    if st.button("🔄 Update Rankings in Google Sheet"):
-        with st.spinner("Updating rankings..."):
-            tracker.update_google_sheet()
+    try:
+        tracker = RankTracker()
+        if not tracker.initialization_successful:
+            st.error(f"Initialization failed: {tracker.error_message}")
+            return
+            
+        if st.button("🔄 Update Rankings in Google Sheet"):
+            with st.spinner("Updating rankings..."):
+                tracker.update_google_sheet()
+                
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        logger.exception("Application error")
 
 if __name__ == "__main__":
     main()
