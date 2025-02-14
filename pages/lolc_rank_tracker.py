@@ -53,7 +53,7 @@ def check_ranking(api_key: str, keyword: str, target_urls: List[str]) -> Dict[st
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
             else:
-                logger.error(f"All attempts failed for keyword: {keyword}")
+                logger.error(f"⏰ All attempts failed for keyword: {keyword}")
                 return {url: (None, "Error") for url in target_urls}
 
 class RankTracker:
@@ -90,7 +90,7 @@ class RankTracker:
             self.creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, SCOPE)
             self.client = gspread.authorize(self.creds)
         except Exception as e:
-            raise Exception(f"Failed to set up Google credentials: {str(e)}")
+            raise Exception(f"🤯 Failed to set up Google credentials: {str(e)}")
 
     def setup_google_sheets(self):
         """Set up Google Sheets connection with proper error handling."""
@@ -102,13 +102,13 @@ class RankTracker:
             sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit?gid=0"
             self.sheet = self.client.open_by_url(sheet_url).sheet1
         except Exception as e:
-            raise Exception(f"Failed to connect to Google Sheet: {str(e)}")
+            raise Exception(f"😭 Failed to connect to Google Sheet: {str(e)}")
 
     def setup_serper_api(self):
         """Set up Serper API with validation."""
         self.api_key = st.secrets.get("settings", {}).get("SERPER_API_KEY")
         if not self.api_key:
-            raise ValueError("SERPER_API_KEY not found in Streamlit secrets")
+            raise ValueError("🙀 SERPER_API_KEY not found in Streamlit secrets")
 
     def clear_cell_formatting(self):
         """Clear cell formatting with error handling."""
@@ -122,7 +122,7 @@ class RankTracker:
                 }]
             })
         except Exception as e:
-            logger.error(f"Failed to clear cell formatting: {str(e)}")
+            logger.error(f"🥲 Failed to clear cell formatting: {str(e)}")
             raise
 
     def apply_cell_formatting(self, cells_to_format: List[Dict]):
@@ -149,7 +149,7 @@ class RankTracker:
                 })
             self.sheet.spreadsheet.batch_update(batch_requests)
         except Exception as e:
-            logger.error(f"Failed to apply cell formatting: {str(e)}")
+            logger.error(f"❌ Failed to apply cell formatting: {str(e)}")
             raise
 
     def update_google_sheet(self):
@@ -157,7 +157,7 @@ class RankTracker:
         try:
             data = self.sheet.get_all_values()
             if not data:
-                st.warning("No data found in the Google Sheet")
+                st.warning("🚫 No data found in the Google Sheet")
                 return
 
             headers = data[0]
@@ -165,7 +165,7 @@ class RankTracker:
             domains = headers[1:]
             
             if REFERENCE_DOMAIN not in domains:
-                st.error(f"Reference domain '{REFERENCE_DOMAIN}' not found in sheet headers")
+                st.error(f"🔍❌ Reference domain '{REFERENCE_DOMAIN}' not found in sheet headers")
                 return
                 
             reference_domain_index = domains.index(REFERENCE_DOMAIN)
@@ -228,11 +228,11 @@ class RankTracker:
             
             progress_bar.empty()
             status_text.empty()
-            st.success("Rankings updated successfully!")
+            st.success("✅🔥 Rankings updated successfully!")
             
         except Exception as e:
-            logger.error(f"Failed to update Google Sheet: {str(e)}")
-            st.error(f"Failed to update rankings: {str(e)}")
+            logger.error(f"❗️ Failed to update Google Sheet: {str(e)}")
+            st.error(f"❗️ Failed to update rankings: {str(e)}")
             raise
 
 def main():
@@ -240,8 +240,8 @@ def main():
     
     # Check for required secrets
     if not st.secrets.get("settings") or not st.secrets.get("gcp_service_account"):
-        st.error("Missing required configurations in Streamlit secrets")
-        st.info("Please ensure both 'settings' and 'gcp_service_account' sections are configured in your .streamlit/secrets.toml file")
+        st.error("🔥 Missing required configurations in Streamlit secrets")
+        st.info("❗️ Please ensure both 'settings' and 'gcp_service_account' sections are configured in your .streamlit/secrets.toml file")
         return
 
     try:
@@ -251,12 +251,12 @@ def main():
             return
             
         if st.button("🔄 Update Rankings in Google Sheet"):
-            with st.spinner("Updating rankings..."):
+            with st.spinner("⏱️ Updating rankings..."):
                 tracker.update_google_sheet()
                 
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        logger.exception("Application error")
+        st.error(f"🚨 An error occurred: {str(e)}")
+        logger.exception("💣 Application error")
 
 if __name__ == "__main__":
     main()
