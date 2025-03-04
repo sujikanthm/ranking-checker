@@ -57,7 +57,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS for modern UI
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1rem; }
@@ -77,7 +77,33 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .input-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
         margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .results-section {
+        background-color: #ffffff;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .sidebar .sidebar-content {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+    }
+    .stMarkdown h3 {
+        color: #0066cc;
+    }
+    .stMarkdown h2 {
+        color: #004080;
+    }
+    .stDataFrame {
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -93,29 +119,37 @@ with st.sidebar:
         - Get page and position rankings
         - Export results to CSV
     """)
-    
+    st.markdown("---")
+    st.markdown("### 🛠️ How to Use")
+    st.write("""
+        1. Enter keywords in the **Keywords** field.
+        2. Enter URLs in the **URLs to Track** field.
+        3. Click **Start Ranking Check**.
+        4. View results and download as CSV.
+    """)
+
 # Main content
 st.title("🔍 Keyword Ranking Checker")
-
+st.markdown("Check the rankings of your keywords on Google.lk for specific URLs.")
 
 # Input section
 st.markdown("### 📝 Enter Your Keywords and URLs")
+with st.container():
+    col1, col2 = st.columns(2)
 
-col1, col2 = st.columns(2)
+    with col1:
+        keywords = st.text_area(
+            "Keywords",
+            placeholder="Enter keywords separated by commas...\nExample: loan, leasing, finance",
+            help="Enter each keyword separated by commas"
+        )
 
-with col1:
-    keywords = st.text_area(
-        "Keywords",
-        placeholder="Enter keywords separated by commas...\nExample: loan, leasing, finance",
-        help="Enter each keyword separated by commas"
-    )
-
-with col2:
-    urls = st.text_area(
-        "URLs to Track",
-        placeholder="Enter URLs separated by commas...\nExample: lolc.com, example.com",
-        help="Enter each URL separated by commas"
-    )
+    with col2:
+        urls = st.text_area(
+            "URLs to Track",
+            placeholder="Enter URLs separated by commas...\nExample: lolc.com, example.com",
+            help="Enter each URL separated by commas"
+        )
 
 # Action button
 if st.button("🚀 Start Ranking Check", use_container_width=True):
