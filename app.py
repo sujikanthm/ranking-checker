@@ -84,10 +84,6 @@ st.markdown("""
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### 🧭 Navigation")
-    st.page_link("pages/lolc_rank_tracker.py", label="📊 LOLC Rank Tracker", icon="📈")
-    
-    st.markdown("---")
     st.markdown("### ℹ️ About")
     st.info("""
         This tool helps you check keyword rankings for any URL on Google.lk.
