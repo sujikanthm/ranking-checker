@@ -19,7 +19,8 @@ SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRY_DELAY = 1
-REFERENCE_DOMAIN = "lolcfinance.com"
+REFERENCE_DOMAIN = "abmauri.lk"
+SHEET_GID = 558564538  # Sheet 2's GID
 GREEN_COLOR = {"red": 183/255, "green": 215/255, "blue": 168/255}
 YELLOW_COLOR = {"red": 255/255, "green": 235/255, "blue": 156/255}
 
@@ -93,14 +94,16 @@ class RankTracker:
             raise Exception(f"🤯 Failed to set up Google credentials: {str(e)}")
 
     def setup_google_sheets(self):
-        """Set up Google Sheets connection with proper error handling."""
+        """Set up connection to Sheet 2."""
         try:
             sheet_id = st.secrets.get("settings", {}).get("SHEET_ID")
             if not sheet_id:
                 raise ValueError("SHEET_ID not found in Streamlit secrets")
             
-            sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit?gid=0"
-            self.sheet = self.client.open_by_url(sheet_url).sheet1
+            spreadsheet = self.client.open_by_key(sheet_id)
+            self.sheet = spreadsheet.get_worksheet_by_id(SHEET_GID)
+            if not self.sheet:
+                raise ValueError(f"Worksheet with GID {SHEET_GID} not found")
         except Exception as e:
             raise Exception(f"😭 Failed to connect to Google Sheet: {str(e)}")
 
@@ -111,12 +114,12 @@ class RankTracker:
             raise ValueError("🙀 SERPER_API_KEY not found in Streamlit secrets")
 
     def clear_cell_formatting(self):
-        """Clear cell formatting with error handling."""
+        """Clear formatting for Sheet 2."""
         try:
             self.sheet.spreadsheet.batch_update({
                 "requests": [{
                     "updateCells": {
-                        "range": {"sheetId": 0},
+                        "range": {"sheetId": SHEET_GID},
                         "fields": "userEnteredFormat.backgroundColor"
                     }
                 }]
@@ -126,7 +129,7 @@ class RankTracker:
             raise
 
     def apply_cell_formatting(self, cells_to_format: List[Dict]):
-        """Apply cell formatting with validation."""
+        """Apply formatting to Sheet 2."""
         if not cells_to_format:
             return
 
@@ -137,7 +140,7 @@ class RankTracker:
                 batch_requests['requests'].append({
                     "repeatCell": {
                         "range": {
-                            "sheetId": 0,
+                            "sheetId": SHEET_GID,
                             "startRowIndex": row,
                             "endRowIndex": row + 1,
                             "startColumnIndex": col,
@@ -237,7 +240,7 @@ class RankTracker:
 
 def main():
     st.set_page_config(
-        page_title="LOLC Rank Tracker",
+        page_title="AB Mauri Rank Tracker",
         page_icon="📊",
         layout="wide"
     )
@@ -291,7 +294,7 @@ def main():
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.markdown("""
-            This tool tracks keyword rankings for LOLC domains across Google Search Results.
+            This tool tracks keyword rankings for AB Mauri domains across Google Search Results.
             Updates are synchronized with Google Sheets for easy tracking and sharing.
             
             **Legend:**
@@ -301,7 +304,7 @@ def main():
         """)
     
     # Main content area
-    st.title("📊 LOLC Rank Tracker")
+    st.title("📊 AB Mauri Rank Tracker")
     
     try:
         tracker = RankTracker()

@@ -7,36 +7,24 @@ import io
 # Retrieve API key from Streamlit Secrets
 API_KEY = st.secrets["settings"]["SERPER_API_KEY"]
 
-st.set_page_config(page_title="Keyword Ranking Checker")
-
-st.title("🔍 Keyword Ranking Checker")
-
-st.markdown("### Navigate to Other Sections:")
-st.page_link("pages/lolc_rank_tracker.py", label="📊 LOLC Rank Tracker")
-
-
 # Function to Check Rankings
 def check_ranking(keyword, target_urls):
     url = "https://google.serper.dev/search"
-    
     headers = {
         "X-API-KEY": API_KEY,
         "Content-Type": "application/json"
     }
-    
     payload = {
         "q": keyword,
-        "gl": "LK",  # Google.lk
+        "gl": "LK",
         "hl": "en",
-        "num": 100  # Get top 100 results
+        "num": 100
     }
-    
     response = requests.post(url, json=payload, headers=headers)
     
     if response.status_code == 200:
         data = response.json()
         rankings = data.get("organic", [])
-        
         results = {}
         for target_url in target_urls:
             position = next(
@@ -44,61 +32,126 @@ def check_ranking(keyword, target_urls):
                 None
             )
             if position:
-                # Calculate page number and position within page
                 page_number = ((position - 1) // 10) + 1
                 position_in_page = ((position - 1) % 10) + 1
                 results[target_url] = f"Page {page_number} Rank {position_in_page}"
             else:
                 results[target_url] = "Not Ranked"
-        
         return results
     else:
         st.error(f"❌ Error for '{keyword}': {response.status_code} - {response.text}")
         return {url: "Error" for url in target_urls}
 
-# Function to Generate CSV as a Downloadable File
+# Function to Generate CSV
 def generate_csv(data, target_urls):
     output = io.StringIO()
     writer = csv.writer(output)
-    
-    writer.writerow(["Keyword"] + target_urls)  # Write Header
-    writer.writerows(data)  # Write Data
-    
+    writer.writerow(["Keyword"] + target_urls)
+    writer.writerows(data)
     return output.getvalue()
 
-# Streamlit UI
+# Page config
+st.set_page_config(
+    page_title="Keyword Ranking Checker",
+    page_icon="🔍",
+    layout="wide"
+)
+
+# Custom CSS
+st.markdown("""
+    <style>
+    .main .block-container { padding-top: 1rem; }
+    .stButton>button {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.2rem;
+        background-color: #0066cc;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #0052a3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .input-section {
+        margin: 1rem 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Sidebar
+with st.sidebar:
+    st.markdown("### 🧭 Navigation")
+    st.page_link("pages/lolc_rank_tracker.py", label="📊 LOLC Rank Tracker", icon="📈")
+    
+    st.markdown("---")
+    st.markdown("### ℹ️ About")
+    st.info("""
+        This tool helps you check keyword rankings for any URL on Google.lk.
+        
+        - Enter multiple keywords (comma-separated)
+        - Enter multiple URLs to track
+        - Get page and position rankings
+        - Export results to CSV
+    """)
+    
+# Main content
 st.title("🔍 Keyword Ranking Checker")
 
-keywords = st.text_area("Enter Keywords (comma separated)", "")
-urls = st.text_area("Enter URLs (comma separated)", "")
 
-if st.button("Start Ranking Check"):
+# Input section
+st.markdown("### 📝 Enter Your Keywords and URLs")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    keywords = st.text_area(
+        "Keywords",
+        placeholder="Enter keywords separated by commas...\nExample: loan, leasing, finance",
+        help="Enter each keyword separated by commas"
+    )
+
+with col2:
+    urls = st.text_area(
+        "URLs to Track",
+        placeholder="Enter URLs separated by commas...\nExample: lolc.com, example.com",
+        help="Enter each URL separated by commas"
+    )
+
+# Action button
+if st.button("🚀 Start Ranking Check", use_container_width=True):
     if keywords and urls:
         keywords_list = [k.strip() for k in keywords.split(",")]
         urls_list = [u.strip() for u in urls.split(",")]
         
-        ranking_data = []
-        progress_bar = st.progress(0)
-        
-        for i, keyword in enumerate(keywords_list):
-            rankings = check_ranking(keyword, urls_list)
-            ranking_data.append([keyword] + [rankings[url] for url in urls_list])
-            progress_bar.progress((i + 1) / len(keywords_list))
-        
-        df = pd.DataFrame(ranking_data, columns=["Keyword"] + urls_list)
-        st.success("✅ Ranking check completed!")
-
-        # Display Results
-        st.write("### Ranking Results")
-        st.dataframe(df)
-
-        # Generate CSV for Download (Only in Memory, Not Saved)
-        csv_data = generate_csv(ranking_data, urls_list)
-        st.download_button(
-            label="📥 Download CSV",
-            data=csv_data,
-            file_name="rankings.csv",
-            mime="text/csv"
-        )
+        with st.status("🔄 Checking rankings...") as status:
+            ranking_data = []
+            progress_bar = st.progress(0)
+            
+            for i, keyword in enumerate(keywords_list):
+                status.update(label=f"Processing: {keyword}")
+                rankings = check_ranking(keyword, urls_list)
+                ranking_data.append([keyword] + [rankings[url] for url in urls_list])
+                progress_bar.progress((i + 1) / len(keywords_list))
+            
+            status.update(label="✅ Ranking check completed!", state="complete")
+            
+            # Display Results
+            st.markdown("### 📊 Ranking Results")
+            df = pd.DataFrame(ranking_data, columns=["Keyword"] + urls_list)
+            st.dataframe(df, use_container_width=True)
+            
+            # Download button
+            csv_data = generate_csv(ranking_data, urls_list)
+            st.download_button(
+                label="📥 Download Results as CSV",
+                data=csv_data,
+                file_name="rankings.csv",
+                mime="text/csv",
+                help="Download the results in CSV format"
+            )
     else:
-        st.warning("🚨 Please enter both keywords and URLs.")
+        st.warning("⚠️ Please enter both keywords and URLs to check rankings.")
