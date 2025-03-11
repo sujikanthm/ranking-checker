@@ -46,6 +46,10 @@ DOMAIN_CONFIG = {
     "beirabrush.com": {
         "sheet_gid": 1133723007,
         "display_name": "Beirabrush"
+    },
+    "carsoncumberbatch.com": { 
+        "sheet_gid": 1203202907,
+        "display_name": "Carson Cumberbatch"
     }
     # Add more domains here in the future
 }
