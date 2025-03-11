@@ -6,7 +6,7 @@ import requests
 import re
 import time
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 import json
 
@@ -19,9 +19,24 @@ SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRY_DELAY = 1
-REFERENCE_DOMAIN = "alliancefinance.lk"
 SHEET_ID = "1vOo7sD_I7cyAWrRWeDaa8szHi8xEG4WrFwqfpsnhDpQ"
-SHEET_GID = 82728278
+
+# Domain configuration
+DOMAIN_CONFIG = {
+    "alliancefinance.lk": {
+        "sheet_gid": 82728278,
+        "display_name": "Alliance Finance"
+    },
+    "anthoneys.com": {
+        "sheet_gid": 1524835619,
+        "display_name": "Anthoneys"
+    },
+    "babynames.lk": {
+        "sheet_gid": 2062356919,
+        "display_name": "Babynames"
+    }
+    # Add more domains here in the future
+}
 
 @st.cache_data(ttl=3600)
 def check_ranking(api_key: str, keyword: str, target_urls: List[str]) -> Dict[str, Tuple[Optional[int], str]]:
@@ -57,9 +72,15 @@ def check_ranking(api_key: str, keyword: str, target_urls: List[str]) -> Dict[st
                 return {url: (None, "Error") for url in target_urls}
 
 class RankTracker:
-    def __init__(self):
+    def __init__(self, selected_domain: str):
         """Initialize the RankTracker with proper error handling."""
         try:
+            self.selected_domain = selected_domain
+            self.domain_config = DOMAIN_CONFIG.get(selected_domain)
+            
+            if not self.domain_config:
+                raise ValueError(f"Configuration for domain {selected_domain} not found")
+                
             self.setup_credentials()
             self.setup_google_sheets()
             self.setup_serper_api()
@@ -96,9 +117,9 @@ class RankTracker:
         """Set up connection to the Sheet."""
         try:
             spreadsheet = self.client.open_by_key(SHEET_ID)
-            self.sheet = spreadsheet.get_worksheet_by_id(SHEET_GID)
+            self.sheet = spreadsheet.get_worksheet_by_id(self.domain_config["sheet_gid"])
             if not self.sheet:
-                raise ValueError(f"Worksheet with GID {SHEET_GID} not found")
+                raise ValueError(f"Worksheet with GID {self.domain_config['sheet_gid']} not found")
         except Exception as e:
             raise Exception(f"😭 Failed to connect to Google Sheet: {str(e)}")
 
@@ -117,11 +138,11 @@ class RankTracker:
                 return
 
             headers = data[0]
-            if len(headers) < 2 or headers[0].lower() != "keyword" or REFERENCE_DOMAIN.lower() not in [h.lower() for h in headers]:
-                st.error(f"🔍❌ Required headers 'keyword' and '{REFERENCE_DOMAIN}' not found in sheet")
+            if len(headers) < 2 or headers[0].lower() != "keyword" or self.selected_domain.lower() not in [h.lower() for h in headers]:
+                st.error(f"🔍❌ Required headers 'keyword' and '{self.selected_domain}' not found in sheet")
                 return
                 
-            domain_col_index = next(i for i, h in enumerate(headers) if h.lower() == REFERENCE_DOMAIN.lower())
+            domain_col_index = next(i for i, h in enumerate(headers) if h.lower() == self.selected_domain.lower())
             keywords_col_index = headers.index("keyword") if "keyword" in headers else 0
             
             keywords = [row[keywords_col_index] for row in data[1:] if row]
@@ -139,8 +160,8 @@ class RankTracker:
                 progress_bar.progress((i + 1) / len(keywords))
                 
                 # Get the ranking for this keyword
-                rankings = check_ranking(self.api_key, keyword, [REFERENCE_DOMAIN])
-                new_position, new_rank_text = rankings.get(REFERENCE_DOMAIN, (None, "Not Ranked"))
+                rankings = check_ranking(self.api_key, keyword, [self.selected_domain])
+                new_position, new_rank_text = rankings.get(self.selected_domain, (None, "Not Ranked"))
                 
                 # Get old rank for comparison and add arrow if improved
                 old_rank_text = previous_data.get(keyword, [])[domain_col_index] if keyword in previous_data and len(previous_data[keyword]) > domain_col_index else ""
@@ -160,16 +181,34 @@ class RankTracker:
             
             progress_bar.empty()
             status_text.empty()
-            st.success("✅🔥 Rankings updated successfully!")
+            st.success(f"✅🔥 Rankings for {self.selected_domain} updated successfully!")
             
         except Exception as e:
             logger.error(f"❗️ Failed to update Google Sheet: {str(e)}")
             st.error(f"❗️ Failed to update rankings: {str(e)}")
             raise
 
+    def get_domain_stats(self) -> Dict[str, Any]:
+        """Get statistics for the selected domain."""
+        try:
+            data = self.sheet.get_all_values()
+            keywords_count = len(data) - 1 if data else 0
+            return {
+                "keywords_count": keywords_count,
+                "reference_domain": self.selected_domain,
+                "display_name": self.domain_config["display_name"]
+            }
+        except Exception as e:
+            logger.error(f"Failed to get domain stats: {str(e)}")
+            return {
+                "keywords_count": 0,
+                "reference_domain": self.selected_domain,
+                "display_name": self.domain_config["display_name"]
+            }
+
 def main():
     st.set_page_config(
-        page_title="Alliance Finance Rank Tracker",
+        page_title="Multi-Domain Rank Tracker",
         page_icon="📊",
         layout="wide"
     )
@@ -197,22 +236,38 @@ def main():
             border-radius: 0.5rem;
             padding: 1rem;
         }
+        .stSelectbox label, .stSelectbox div[data-baseweb="select"] {
+            font-size: 1.1rem;
+        }
+        .stSelectbox div[data-baseweb="select"] {
+            margin-top: 0.5rem;
+        }
         </style>
     """, unsafe_allow_html=True)
+    
+    # Domain Selection
+    domain_options = {config["display_name"]: domain for domain, config in DOMAIN_CONFIG.items()}
+    display_names = list(domain_options.keys())
+    
+    selected_display_name = st.selectbox(
+        "📌 Select Domain to Track",
+        options=display_names,
+        index=0
+    )
+    selected_domain = domain_options[selected_display_name]
     
     # Sidebar
     with st.sidebar:
         st.markdown("### 📈 Tracking Statistics")
         if st.secrets.get("settings") and st.secrets.get("gcp_service_account"):
             try:
-                tracker = RankTracker()
+                tracker = RankTracker(selected_domain)
                 if tracker.initialization_successful:
-                    data = tracker.sheet.get_all_values()
-                    keywords_count = len(data) - 1 if data else 0
+                    stats = tracker.get_domain_stats()
                     
                     st.markdown(f"""
-                        - 🎯 Keywords tracked: **{keywords_count}**
-                        - 🌐 Reference domain: **{REFERENCE_DOMAIN}**
+                        - 🎯 Keywords tracked: **{stats['keywords_count']}**
+                        - 🌐 Reference domain: **{stats['reference_domain']}**
                     """)
             except Exception:
                 st.warning("⚠️ Could not load tracking statistics")
@@ -220,18 +275,23 @@ def main():
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.markdown("""
-            This tool tracks keyword rankings for Alliance Finance domain across Google Search Results.
+            This tool tracks keyword rankings for multiple domains across Google Search Results.
             Updates are synchronized with Google Sheets for easy tracking and sharing.
             
             **Legend:**
             - ↑ Improved ranking
+            
+            **How to add a new domain:**
+            1. Update the DOMAIN_CONFIG dictionary in the code
+            2. Add the domain and its GID
+            3. Ensure the sheet has 'keyword' and domain name as headers
         """)
     
     # Main content area
-    st.title("📊 Alliance Finance Rank Tracker")
+    st.title(f"📊 {selected_display_name} Rank Tracker")
     
     try:
-        tracker = RankTracker()
+        tracker = RankTracker(selected_domain)
         if not tracker.initialization_successful:
             st.error(f"⚠️ Initialization failed: {tracker.error_message}")
             return
@@ -242,7 +302,7 @@ def main():
         with col1:
             st.metric(
                 label="Reference Domain", 
-                value=REFERENCE_DOMAIN,
+                value=selected_domain,
                 help="Domain being tracked",
                 delta="Active"
             )
@@ -254,8 +314,8 @@ def main():
         
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.info("""
-                Click the button to fetch the latest keyword rankings from Google Search.
+            st.info(f"""
+                Click the button to fetch the latest keyword rankings for **{selected_domain}** from Google Search.
                 Rankings will be updated in the connected Google Sheet while preserving existing formatting.
                 
                 **Note:** This process may take a few minutes depending on the number of keywords.
@@ -263,10 +323,10 @@ def main():
         
         with col2:
             if st.button("🚀 Start Update", use_container_width=True):
-                with st.spinner("⏱️ Fetching latest rankings..."):
+                with st.spinner(f"⏱️ Fetching latest rankings for {selected_domain}..."):
                     tracker.update_google_sheet()
                     st.session_state.last_update = time.strftime("%Y-%m-%d %H:%M:%S")
-                    st.success("✅ Rankings updated successfully!")
+                    st.success(f"✅ Rankings for {selected_domain} updated successfully!")
                     st.balloons()
 
     except Exception as e:
