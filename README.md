@@ -1,7 +1,7 @@
 # Keyword Ranking Checker & Multi-Domain Rank Tracker
 A Streamlit application that provides three functionalities:
 1. Check keyword rankings of specified URLs on Google.lk using the Serper API with CSV export
-2. Track and automatically update keyword rankings for LOLC in Google Sheets with color-coded performance indicators
+2. Track and automatically update keyword rankings for LOLC and ABM in Google Sheets with color-coded performance indicators
 3. Track and automatically update keyword rankings for multiple domains in Google Sheets with an easy domain selection interface
 
 ## Features
