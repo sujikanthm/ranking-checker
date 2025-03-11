@@ -37,7 +37,7 @@ DOMAIN_CONFIG = {
     },
     "bankcioforum.lk": {
         "sheet_gid": 277049799,
-        "display_name": "Bankcioforum"
+        "display_name": "Bank CIO Forum"
     },
     "baurs.com": {
         "sheet_gid": 1988253579,
