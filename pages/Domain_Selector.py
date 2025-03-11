@@ -45,7 +45,7 @@ DOMAIN_CONFIG = {
     },
     "beirabrush.com": {
         "sheet_gid": 1133723007,
-        "display_name": "Beirabrush"
+        "display_name": "Beira Brush"
     },
     "carsoncumberbatch.com": { 
         "sheet_gid": 1203202907,
