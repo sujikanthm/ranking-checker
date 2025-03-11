@@ -50,6 +50,70 @@ DOMAIN_CONFIG = {
     "carsoncumberbatch.com": { 
         "sheet_gid": 1203202907,
         "display_name": "Carson Cumberbatch"
+    },
+    "dorakadapaliya.com": {
+        "sheet_gid": 78524544,
+        "display_name": "Dorakadapaliya"
+    },
+    "ecospindles.com": {
+        "sheet_gid": 450928913,
+        "display_name": "Ecospindles"
+    },
+    "janathasteels.lk": {
+        "sheet_gid": 252478567,
+        "display_name": "Janatha Steels"
+    },
+    "johnkeellsfoundation.com": {
+        "sheet_gid": 2068561581,
+        "display_name": "John Keells Foundation"
+    },
+    "kalapola.lk": {
+        "sheet_gid": 45289608,
+        "display_name": "Kalapola"
+    },
+    "kia.lk": {
+        "sheet_gid": 58695663,
+        "display_name": "Kia"
+    },
+    "lalangroup.com": {
+        "sheet_gid": 299225538,
+        "display_name": "Lalan Group"
+    },
+    "lalanrubbers.com": {
+        "sheet_gid": 756345670,
+        "display_name": "Lalan Rubbers"
+    },
+    "lankaacdemy.lk": {
+        "sheet_gid": 603026025,
+        "display_name": "Lanka Academy"
+    },
+    "lankatalents.lk": {
+        "sheet_gid": 1970971384,
+        "display_name": "Lanka Talents"
+    },
+    "lolcfinance.com": {
+        "sheet_gid": 408082916,
+        "display_name": "LOLC Finance"
+    },
+    "lolcgeneral.com": {
+        "sheet_gid": 287586014,
+        "display_name": "LOLC General"
+    },
+    "lolclife.com": {
+        "sheet_gid": 1720241000,
+        "display_name": "LOLC Life"
+    },
+    "plasticcycle.lk": {
+        "sheet_gid": 1724175216,
+        "display_name": "Plasticcycle"
+    },
+    "senikmaholdings.com": {
+        "sheet_gid": 22768441,
+        "display_name": "Senikma Holdings"
+    },
+    "keells.com": {
+        "sheet_gid": 2055861260,
+        "display_name": "Keells"
     }
     # Add more domains here in the future
 }
