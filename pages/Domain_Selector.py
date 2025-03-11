@@ -34,6 +34,18 @@ DOMAIN_CONFIG = {
     "babynames.lk": {
         "sheet_gid": 2062356919,
         "display_name": "Babynames"
+    },
+    "bankcioforum.lk": {
+        "sheet_gid": 277049799,
+        "display_name": "Bankcioforum"
+    },
+    "baurs.com": {
+        "sheet_gid": 1988253579,
+        "display_name": "Baurs"
+    },
+    "beirabrush.com": {
+        "sheet_gid": 1133723007,
+        "display_name": "Beirabrush"
     }
     # Add more domains here in the future
 }
@@ -326,8 +338,6 @@ def main():
                 with st.spinner(f"⏱️ Fetching latest rankings for {selected_domain}..."):
                     tracker.update_google_sheet()
                     st.session_state.last_update = time.strftime("%Y-%m-%d %H:%M:%S")
-                    st.success(f"✅ Rankings for {selected_domain} updated successfully!")
-                    st.balloons()
 
     except Exception as e:
         st.error(f"🚨 An error occurred: {str(e)}")
