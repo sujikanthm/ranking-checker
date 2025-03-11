@@ -57,7 +57,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for modern UI
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1rem; }

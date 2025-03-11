@@ -242,7 +242,6 @@ def main():
         layout="wide"
     )
     
-    # Custom CSS
     st.markdown("""
         <style>
         .main .block-container { padding-top: 1rem; }
