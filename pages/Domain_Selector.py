@@ -83,7 +83,7 @@ DOMAIN_CONFIG = {
         "sheet_gid": 756345670,
         "display_name": "Lalan Rubbers"
     },
-    "lankaacdemy.lk": {
+    "lankaacademy.lk": {
         "sheet_gid": 603026025,
         "display_name": "Lanka Academy"
     },
